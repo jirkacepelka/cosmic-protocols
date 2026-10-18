@@ -31,7 +31,7 @@
     or prevent overdrawing of other server-side drawn interfaces.
   </description>
 
-  <interface name="cosmic_corner_radius_manager_v1" version="2">
+  <interface name="cosmic_corner_radius_manager_v1" version="3">
     <description summary="corner radius global">
       Manager for creating corner-radius objects for existing surfaces
     </description>
@@ -115,6 +115,31 @@
         type="object"
         interface="zwlr_layer_surface_v1"
         summary="the layer surface"
+      />
+    </request>
+
+    <request name="get_corner_radius_subsurface" since="3">
+      <description
+        summary="Create a new corner-radius object for an existing subsurface"
+      >
+        Instantiate an interface extension for the given wl_surface to specify its corner radius.
+        The wl_surface must have the wl_subsurface role, otherwise the no_role protocol error
+        will be raised.
+
+        If the given wl_surface already has a cosmic_corner_radius_subsurface_v1 object associated,
+        the corner_radius_exists protocol error will be raised.
+      </description>
+      <arg
+        name="id"
+        type="new_id"
+        interface="cosmic_corner_radius_subsurface_v1"
+        summary="the new cosmic_corner_radius_subsurface_v1 object"
+      />
+      <arg
+        name="surface"
+        type="object"
+        interface="wl_surface"
+        summary="the surface with the wl_subsurface role"
       />
     </request>
 
@@ -278,6 +303,63 @@
         name="padding_too_large"
         value="2"
         summary="the associated layer's size isn't large enough for the requested padding"
+      />
+    </enum>
+  </interface>
+
+  <interface name="cosmic_corner_radius_subsurface_v1" version="1">
+    <description summary="corner radius subsurface">
+      The corner-radius object provides a way to specify a corner-radius
+      for its associated subsurface. Unlike for toplevels and layers, the
+      compositor is expected to clip the contents of the subsurface to the
+      rounded rectangle.
+
+      If the wl_surface associated with the cosmic_corner_radius_subsurface_v1
+      object has been destroyed, this object becomes inert. Any further requests
+      other than destroy will raise the surface_destroyed protocol error.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="Destroy the corner-radius object">
+        Informs the server that the client will no longer be using this protocol
+        object. The corner radius will be unset on the next commit.
+      </description>
+    </request>
+
+    <request name="set_radius">
+      <description summary="Set corner radius">
+        This request sets the corner radius values for the subsurface.
+
+        The corner radius is double-buffered state and will be applied on
+        the next wl_surface.commit, following the synchronization rules of
+        wl_subsurface.
+
+        The value is given in logical space relative to the size of the surface
+        (the wp_viewport destination size if set, the buffer size otherwise).
+        Since that size may change at any commit, values exceeding half of either
+        dimension are not an error, the compositor clamps them instead.
+      </description>
+      <arg name="top_left" type="uint" summary="top-left corner radius" />
+      <arg name="top_right" type="uint" summary="top-right corner radius" />
+      <arg
+        name="bottom_right"
+        type="uint"
+        summary="bottom-right corner radius"
+      />
+      <arg name="bottom_left" type="uint" summary="bottom-left corner radius" />
+    </request>
+
+    <request name="unset_radius">
+      <description summary="Unset corner radius">
+        Unsets any previously set corner radius values without invalidating the object for later use.
+      </description>
+    </request>
+
+    <enum name="error">
+      <entry
+        name="surface_destroyed"
+        value="0"
+        summary="the associated wl_surface has been already destroyed"
       />
     </enum>
   </interface>
